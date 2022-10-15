@@ -1,0 +1,90 @@
+groups: # ({#{.ExternalLabels}#}) выведет в сообщении глобальную заданную метку, но будет некрасиво
+  - name: Logs alerts for container netvision-analytics
+    rules:
+      - alert: ManyLogErrors
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "[Ee]rror"[2m])) >= 1
+        for: 1m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains many log errors
+
+      - alert: Error Unreliable connection, closing the reader
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "Unreliable connection, closing the reader"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains error - Unreliable connection, closing the reader
+
+      - alert: Log pushFrameFurther pushing frame to the next pipeline member failed
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "pushFrameFurther pushing frame to the next pipeline member failed"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - pushFrameFurther pushing frame to the next pipeline member failed
+
+      - alert: Log Event pushing frame to it's analytic failed with timeout
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "Event pushing frame to it's analytic failed with timeout"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - Event pushing frame to it's analytic failed with timeout
+
+      - alert: Error health check
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "no health check update for more than"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics have error health check
+
+      - alert: Error An error occurred during the status check. We send alarm
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "An error occurred during the status check. We send alarm"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains error - An error occurred during the status check. We send alarm
+
+      - alert: Log push in outMsgQueue failed
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "push in outMsgQueue failed"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - push in outMsgQueue failed
+
+      - alert: Log push to status_check failed
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "push to status_check failed"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - push to status_check failed
+
+      - alert: Log push into confirmEventQueue failed
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "push into confirmEventQueue failed"[2m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - push into confirmEventQueue failed
+
+      - alert: Log push failed with timeout
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "push failed with timeout"[5m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - push failed with timeout
+
+      - alert: Log rejected by timeout
+        expr: sum(count_over_time({container_name="netvision-analytics"}|~ "rejected by timeout"[2m])) >= 1
+        for: 0m
+        labels:
+            severity: critical-logs
+        annotations:
+          summary: Project {{ inventory_project_name }}. Container netvision-analytics contains log - rejected by timeout

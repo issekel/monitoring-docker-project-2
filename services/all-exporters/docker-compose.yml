@@ -1,0 +1,229 @@
+version: "3.7"
+
+services:
+
+  {{ inventory_node_exporter_hostname }}:
+    image: prom/node-exporter:{{ inventory_node_exporter_tag }}
+    hostname: {{ inventory_node_exporter_hostname }}
+    container_name: {{ inventory_node_exporter_hostname }}
+#    pid: "host"
+#    network_mode: "host"
+    volumes:
+      - /:/rootfs:ro,rslave
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    command:
+      - --path.rootfs=/rootfs
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    restart: always
+    ports:
+      - {{ project_external_ip }}:9100:9100
+    networks:
+      - {{ inventory_monitoring_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+
+{% if ENABLE_REDIS | default("false") == "true" %}
+  redist-exporter:
+    image: oliver006/redis_exporter:v1.43.0-alpine
+    hostname: monitoring-redis-exporter
+    container_name: monitoring-redis-exporter
+    # ports:
+    #   - 9121:9121
+    command:
+      - "--redis.addr=redis://redis:6379"
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_KAFKA | default("false") == "true" %}
+  kafka-exporer:
+    image: danielqsj/kafka-exporter:v1.6.0
+    hostname: monitoring-kafka-exporter
+    container_name: monitoring-kafka-exporter
+#    ports:
+#      - 9308:9308
+    command:
+      - '--kafka.server=kafka:9090'
+{% if KAFKA_AUTH | default("false") == "true" %}
+      - '--sasl.enabled'
+      - '--sasl.username=user'
+      - '--sasl.password={{suser_pass}}'
+      - '--sasl.mechanism=plain'
+{% endif %}
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_NVIDIA | default("false") == "true" %}
+  nvidia-exporter:
+    image: nvidia/dcgm-exporter:latest
+    hostname: monitoring-nvidia-exporter
+    container_name: monitoring-nvidia-exporter
+    restart: always
+    runtime: nvidia
+    volumes:
+      - /usr/local/cuda-10.2:/usr/local/cuda
+    networks:
+      - {{ inventory_monitoring_network }}
+#    ports:
+#      - 8087:9400
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_MONGO | default("false") == "true" %}
+  mongodb-exporter:
+    image: bitnami/mongodb-exporter:0.32.0
+    hostname: monitoring-mongodb-exporter
+    container_name: monitoring-mongodb-exporter
+    # ports:
+    #   - 9216:9216
+    command:
+      - "--mongodb.uri=mongodb://root:1Qaz2Wsx123@mongo:27017/admin?ssl=false"
+      - "--mongodb.global-conn-pool"
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_MONGO_ORION | default("false") == "true" %}
+  mongodb-orion-exporter:
+    image: bitnami/mongodb-exporter:0.32.0
+    hostname: monitoring-mongodb-orion-exporter
+    container_name: monitoring-mongodb-orion-exporter
+    # ports:
+    #   - 9217:9216
+    command:
+      - "--mongodb.uri=mongodb://root:1Qaz2Wsx123@orion-mongo:27017/admin?ssl=false"
+      - "--mongodb.global-conn-pool"
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_PSQL_CAMUNDA | default("false") == "true" %}
+  postgres-camunda-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.10.1
+    hostname: monitoring-postgres-camunda-exporter
+    container_name: monitoring-postgres-camunda-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:!QAZ2wsx@camunda-db:5432/camunda?sslmode=disable
+      - PG_EXPORTER_AUTO_DISCOVER_DATABASES=true
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_PSQL_KEYCLOAK | default("false") == "true" %}
+  postgres-keycloak-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.10.1
+    hostname: monitoring-postgres-keycloak-exporter
+    container_name: monitoring-postgres-keycloak-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:password@keycloak-db:5432/keycloakdb?sslmode=disable
+      - PG_EXPORTER_AUTO_DISCOVER_DATABASES=true
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_PSQL_COORDINATOR | default("false") == "true" %}
+  postgres-coordinator-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.10.1
+    hostname: monitoring-postgres-coordinator-exporter
+    container_name: monitoring-postgres-coordinator-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:!QAZ2wsx@coordinator-db:5432/tasks_coordinator?sslmode=disable
+      - PG_EXPORTER_AUTO_DISCOVER_DATABASES=true
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_PSQL_MEDIA_STREAMER | default("false") == "true" %}
+  postgres-media-streamer-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.10.1
+    hostname: monitoring-postgres-media-streamer-exporter
+    container_name: monitoring-postgres-media-streamer-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:!QAZ2wsx123@media-streamer-db:5432/media_streamer?sslmode=disable
+      - PG_EXPORTER_AUTO_DISCOVER_DATABASES=true
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+{% if ENABLE_PSQL | default("false") == "true" %}
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.10.1
+    hostname: monitoring-postgres-exporter
+    container_name: monitoring-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://admin:!QAZ2wsx123@postgres:5432?sslmode=disable
+      - PG_EXPORTER_AUTO_DISCOVER_DATABASES=true
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+{% endif %}
+
+networks:
+  {{ inventory_monitoring_network }}:
+    name: {{ inventory_monitoring_network }}
+    external: true

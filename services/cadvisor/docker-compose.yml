@@ -1,0 +1,24 @@
+version: "3.7"
+
+services:
+
+  {{ inventory_cadvisor_hostname }}:
+    image: gcr.io/cadvisor/cadvisor:{{ inventory_cadvisor_tag }}
+    hostname: {{ inventory_cadvisor_hostname }}
+    container_name: {{ inventory_cadvisor_hostname }}
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - {{ inventory_monitoring_network }}
+    ports:
+      - {{ ansible_host }}:{{ inventory_cadvisor_port }}:8080
+    restart: always
+
+networks:
+  {{ inventory_monitoring_network }}:
+    name: {{ inventory_monitoring_network }}
+    external: true

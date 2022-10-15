@@ -1,0 +1,290 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    type: {{ inventory_project_name }}
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - 'monitoring-alertmanager:9093'
+
+rule_files:
+  - rules*
+
+scrape_configs:
+
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+      labels:
+        project: {{ inventory_project_name }}
+        service: prometheus
+        node: {{ ansible_nodename }}
+
+  - job_name: 'cadvisor_{{ inventory_project_name }}'
+    scrape_interval: 5s
+    consul_sd_configs:
+      - server: '{{ project_external_ip }}:8500'
+    relabel_configs:
+      - source_labels: ['__meta_consul_node']
+        target_label: node
+      - source_labels: ['job']
+        target_label: project
+      - source_labels: [__meta_consul_address]
+        target_label: instance
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8300'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8000'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '9100'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '2020'
+        action: drop
+
+  - job_name: 'node_exporter_{{ inventory_project_name }}'
+    scrape_interval: 15s
+    consul_sd_configs:
+      - server: '{{ project_external_ip }}:8500'
+    relabel_configs:
+      - source_labels: ['__meta_consul_node']
+        target_label: node
+      - source_labels: ['__meta_consul_tagged_address_lan']
+        target_label: instance
+      - source_labels: ['job']
+        target_label: project
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8300'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8885'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8000'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '2020'
+        action: drop
+
+  - job_name: 'loki'
+    metrics_path: /metrics
+    static_configs:
+    - targets: ['monitoring-loki:3100']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+
+  - job_name: 'fluent-bit_{{ inventory_project_name }}'
+    scrape_interval: 10s
+    metrics_path: '/api/v1/metrics/prometheus'
+    consul_sd_configs:
+      - server: '{{ project_external_ip }}:8500'
+    relabel_configs:
+      - source_labels: ['__meta_consul_node']
+        target_label: node
+      - source_labels: ['job']
+        target_label: project
+      - source_labels: [__meta_consul_address]
+        target_label: instance
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8300'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8000'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '9100'
+        action: drop
+      - source_labels: ['__meta_consul_service_port']
+        regex: '8885'
+        action: drop
+
+{% if ENABLE_KAFKA | default("false") == "true" %}
+  - job_name: 'kafka-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-kafka-exporter:9308']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_MINIO | default("false") == "true" %}
+  - job_name: 'minio-job'
+    metrics_path: /minio/prometheus/metrics
+    scheme: http
+    static_configs:
+    - targets: ['minio:9000']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_NVIDIA | default("false") == "true" %}
+  - job_name: 'dcgm'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-nvidia-exporter:9400']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+    {% endif %}
+
+{% if ENABLE_REDIS | default("false") == "true" %}
+  - job_name: 'redis_exporter_targets'
+    static_configs:
+    - targets:
+      - redis://redis:6379
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    metrics_path: /scrape
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+
+  - job_name: 'redis_exporter'
+    static_configs:
+    - targets:
+      - monitoring-redis-exporter:9121
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+    {% endif %}
+
+{% if ENABLE_MONGO | default("false") == "true" %}
+  - job_name: 'mongodb-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-mongodb-exporter:9216']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_MONGO_ORION | default("false") == "true" %}
+  - job_name: 'mongodb-orion-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-mongodb-orion-exporter:9216']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_PSQL_CAMUNDA | default("false") == "true" %}
+  - job_name: 'postgres-camunda-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-postgres-camunda-exporter:9187']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_PSQL_KEYCLOAK| default("false") == "true" %}
+  - job_name: 'postgres-keycloak-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-postgres-keycloak-exporter:9187']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_PSQL_COORDINATOR | default("false") == "true" %}
+  - job_name: 'postgres-coordinator-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-postgres-coordinator-exporter:9187']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_PSQL_MEDIA_STREAMER | default("false") == "true" %}
+  - job_name: 'postgres-media-streamer-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-postgres-media-streamer-exporter:9187']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}
+
+{% if ENABLE_PSQL | default("false") == "true" %}
+  - job_name: 'postgres-exporter'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['monitoring-postgres-exporter:9187']
+      labels:
+        project: {{ inventory_project_name }}
+        node: {{ ansible_nodename }}
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: '{{ inventory_project_name }}'
+{% endif %}

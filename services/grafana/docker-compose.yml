@@ -1,0 +1,32 @@
+version: '3.7'
+
+services:
+
+  {{ inventory_grafana_hostname }}:
+    image: grafana/grafana:{{ inventory_grafana_tag }}
+    hostname: {{ inventory_grafana_hostname }}
+    container_name: {{ inventory_grafana_hostname }}
+    user: "472"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
+      - ./config/grafana.ini:/etc/grafana/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=password
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - {{ inventory_monitoring_network }}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+
+networks:
+  {{ inventory_monitoring_network }}:
+    name: {{ inventory_monitoring_network }}
+    external: true
+
+volumes:
+  grafana-data:

@@ -1,0 +1,44 @@
+global:
+  resolve_timeout: 1m
+
+templates:
+- '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  group_by: ['alertname', 'service', 'instance', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 365d
+  receiver: 'zulip'
+  routes:
+    - matchers:
+      - severity=~"error|critical"
+      receiver: 'zulip'
+      continue: false
+    - matchers:
+      - severity=~"critical-logs"
+      receiver: 'zulip-logs'
+      continue: false
+    - matchers:
+      - severity=~"warning|info|none"
+      receiver: 'slack-notifications'
+      continue: false
+receivers:
+  - name: 'slack-notifications'
+    slack_configs:
+    - api_url: https://hooks.slack.com/services/your_uid
+      channel: '#monitoring'{% raw %}
+      color: '{{ template "slack.color" . }}'
+      title: '{{ template "slack.title" . }}'
+      pretext: '{{ template "slack.pretext" . }}'
+      text: '{{ template "slack.text" . }}' #"\ntimestamp: {{ .CommonAnnotations.timestamp }}\nsummary: {{ .CommonAnnotations.summary }}\ndescription: {{ .CommonAnnotations.description }}"
+      send_resolved: false
+{% endraw %}
+  - name: 'zulip'
+    webhook_configs:
+    - url: 'https://zulip.com/api/v1/external/alertmanager?api_key=your_uid&stream=monitoring&topic=platforma&desc=summary'
+      send_resolved: true
+  - name: 'zulip-logs'
+    webhook_configs:
+    - url: 'https://zulip.com/api/v1/external/alertmanager?api_key=your_uid&stream=monitoring&topic=platforma&desc=summary'
+      send_resolved: false
