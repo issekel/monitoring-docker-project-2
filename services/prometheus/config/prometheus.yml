@@ -109,6 +109,29 @@ scrape_configs:
         regex: '8885'
         action: drop
 
+{% if enable_ping_complex | default("false") == "true" %}
+  - job_name: 'complex_{{ inventory_project_name }}'
+    metrics_path: /probe
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [module]
+        target_label: __param_module
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: {{ inventory_blackbox_exporter_hostname }}:9115
+    static_configs:
+
+{% for host in groups[inventory_project_name] %}
+      - targets: ['{{ hostvars[host].ansible_host }}']
+        labels:
+          project: {{ inventory_project_name }}
+          node: {{ hostvars[host].complex_name }}
+          module: icmp
+{% endfor %}
+{% endif %}
+
 {% if ENABLE_KAFKA | default("false") == "true" %}
   - job_name: 'kafka-exporter'
     scrape_interval: 5s

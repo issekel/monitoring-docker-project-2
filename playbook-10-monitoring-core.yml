@@ -5,20 +5,53 @@
   strategy: linear
   become: yes
 
+  tasks:
+    - name: Create docker network
+      shell: docker network create {{ inventory_monitoring_network }}
+      ignore_errors: true
+
   roles:
 
     - role: docker-compose-run
       docker_compose_run_local_common_services_dir: "./services"
       docker_compose_run_remote_services_dir: "/opt/services/monitoring"
-      docker_compose_run_transfer_images: false
       docker_compose_run_action: present
       docker_compose_restarted: yes
       docker_compose_run_services_list:
         - consul-server
+
+- hosts: platforma
+  gather_facts: true
+  strategy: linear
+  become: yes
+  vars:
+    fluentbit_log_path:
+  pre_tasks:
+    - name: Search LogPath
+      shell: |
+        docker ps -q -n 1 | xargs docker inspect --format='{{ LogPath }}'
+      vars:
+        LogPath: !unsafe '{{.LogPath}}'
+      register: logpath
+    - set_fact:
+        fluentbit_log_path: "{{ logpath.stdout | regex_search('[\\D]+.containers.') }}"
+    - name: Print
+      debug:
+        var: fluentbit_log_path
+
+  roles:
+
+    - role: docker-compose-run
+      docker_compose_run_local_common_services_dir: "./services"
+      docker_compose_run_remote_services_dir: "/opt/services/monitoring"
+      docker_compose_run_action: present
+      docker_compose_restarted: yes
+      docker_compose_run_services_list:
         - all-exporters
         - cadvisor
         - loki
         - fluent-bit
+        - blackbox-exporter
         - prometheus
         - alertmanager
         - grafana

@@ -15,7 +15,7 @@ services:
     networks:
       - {{ inventory_monitoring_network }}
     ports:
-      - {{ ansible_host }}:{{ inventory_cadvisor_port }}:8080
+      - {{ inventory_cadvisor_port }}:8080
     restart: always
 
 networks:

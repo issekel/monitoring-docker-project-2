@@ -20,7 +20,7 @@ services:
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
     restart: always
     ports:
-      - {{ ansible_host }}:9100:9100
+      - 9100:9100
     networks:
       - {{ inventory_monitoring_network }}
     logging:
